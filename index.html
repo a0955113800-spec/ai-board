@@ -804,7 +804,7 @@ function fullSheet(id0) {
 function loginSheet(m) {
   let ac = m.acct || 'a1';
   const url = (S.access || {}).notifyUrl;
-  sheet('我要登入（等驗證碼）', [h('p', { class: 'muted' }, '驗證碼會寄到管理者的信箱。' + (url ? '送出後管理者會收到 Gmail 通知，你的名字也會出現在管理者看板的最上面。' : '送出後，你的名字會出現在管理者看板的最上面。') + '急的話請直接 LINE 管理者。'),
+  sheet('我要登入（等驗證碼）', [h('p', { class: 'muted' }, '驗證碼會寄到管理者的信箱。' + (url ? '送出後管理者會收到 Gmail 通知，收到驗證碼會寄到你登入看板的 Gmail（或用 LINE 傳）。' : '送出後，你的名字會出現在管理者看板的最上面。') + '急的話請直接 LINE 管理者。'),
     h('div', { class: 'lab' }, '要登入哪個帳號'), acctPicker(ac, m.acct, id => { ac = id; })],
     h('button', { class: 'btn primary big wide', type: 'button', onclick: async () => {
       if (!await act(() => BK.add('cb_login', { mid: m.id, name: m.name, acct: ac, at: Date.now(), done: false }), '已通知管理者')) return;
@@ -812,7 +812,27 @@ function loginSheet(m) {
       if (url) BK.notify(url, { kind: 'login', acct: ac, acctName: aname(ac) }).then(r => { if (r && r.ok && !r.skipped) toast('已通知管理者（Gmail 已寄出）'); }, () => {});
     } }, '送出'));
 }
-const doneLogin = l => act(() => BK.update('cb_login/' + l.id, { done: true, doneAt: Date.now(), doneBy: myId() }), '已標示處理完');
+const markDone = (l, sent) => act(() => BK.update('cb_login/' + l.id, Object.assign({ done: true, doneAt: Date.now(), doneBy: myId() }, sent ? { codeSent: true } : {})), sent ? '已寄給 ' + mname(l.mid, l.name) + '，並標示處理完' : '已標示處理完');
+// 已處理：有設定 Gmail 通知就可以順便把驗證碼寄給他（驗證碼只交給通知服務，不寫進資料庫）
+function doneLogin(l) {
+  const url = (S.access || {}).notifyUrl;
+  if (!url) { markDone(l); return; }
+  const who = mname(l.mid, l.name);
+  const code = h('input', { class: 'in w', maxlength: '100', autocomplete: 'off', inputmode: 'text', placeholder: '貼上驗證碼', 'aria-label': '驗證碼' });
+  const send = h('button', { class: 'btn primary big wide', type: 'button', onclick: async () => {
+    const v = code.value.trim();
+    if (!v) { toast('先貼上驗證碼'); code.focus(); return; }
+    send.disabled = true; toast('寄送中…');
+    let r = null;
+    try { r = await BK.notify(url, { kind: 'code', mid: l.mid, acct: l.acct, acctName: aname(l.acct), code: v }); } catch (e) { r = { err: '連不到通知服務' }; }
+    send.disabled = false;
+    if (!r || !r.ok) { toast('沒有寄出：' + ((r && r.err) || '不明原因')); return; }
+    if (await markDone(l, true)) closeSheet();
+  } }, '寄給他並標示已處理');
+  sheet('處理驗證碼', [h('p', { class: 'muted' }, who + ' 要登入 ' + aname(l.acct) + '。貼上驗證碼，會寄到他綁定的 Gmail；已經用 LINE 傳了就按下面「只標示已處理」。'), code],
+    [send, h('button', { class: 'btn ghost big wide', type: 'button', onclick: async () => { if (await markDone(l)) closeSheet(); } }, '只標示已處理')]);
+  setTimeout(() => code.focus(), 50);
+}
 function loginBanner() {
   return h('div', { class: 'note adm' }, h('b', null, '等驗證碼（' + S.logins.length + '）'),
     S.logins.map(l => h('div', { class: 'row' }, h('span', null, h('b', null, mname(l.mid, l.name)), ' 要登入 ' + aname(l.acct)), h('small', null, ago(l.at)), h('span', { class: 'sp' }),
