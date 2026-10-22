@@ -655,7 +655,7 @@ function quotaRow(id, m) {
   const who = h('div', { class: 'who num' });
   if (st.op.length) st.op.forEach(s => who.append(h('span', null, h('b', null, mname(s.mid, s.name)), ' ' + hm(s.start) + ' 起在用' + (s.purpose ? '，' + s.purpose : ''), s.borrow ? tag('借用', 'warm') : null, s.proxy ? tag('代登記') : null, stale(s) ? tag('可能忘了結束', 'gray') : null)));
   else if (q.fullOn) who.append(h('span', null, (a.fullBy ? mname(a.fullBy) + ' ' : '') + (a.fullAt ? hm(a.fullAt) + ' ' : '') + '回報已滿'));
-  else who.append(h('span', null, a.at ? '空著．額度由 ' + mname(a.by, '管理者') + ' 於 ' + when(a.at) + ' 回報' : '空著．還沒有人回報額度'));
+  else who.append(h('span', null, a.at ? '空著．額度由 ' + (a.auto ? 'Claude Code 自動' : mname(a.by, '管理者') + ' 於 ' + when(a.at) + ' ') + '回報' + (a.auto ? '（' + when(a.at) + '）' : '') : '空著．還沒有人回報額度'));
   who.append(h('span', { class: 'acts' },
     h('button', { class: 'link', type: 'button', onclick: () => quotaSheet(id) }, '更新額度'),
     h('button', { class: 'link', type: 'button', onclick: () => fullSheet(id) }, '回報已滿')));
@@ -745,7 +745,7 @@ async function saveQuota(id, p5, r5, pw) {
   if (nw != null) { d.pw = nw; d.pwAt = t; }
   if (!Object.keys(d).length) return false;
   if (a.full && ((a.fullKind === 'w' && nw != null && nw < 90) || (a.fullKind !== 'w' && n5 != null && n5 < 90))) d.full = false;
-  d.by = myId(); d.at = t;
+  d.by = myId(); d.at = t; d.auto = false;
   await BK.set('cb_accounts/' + id, d, true);
   return true;
 }
@@ -796,7 +796,7 @@ function fullSheet(id0) {
     h('p', { class: 'muted' }, 'claude.ai 跳出額度用完的訊息時會寫重置時間；沒填就以 5 小時後計。'), box5, boxW],
     h('button', { class: 'btn primary big wide', type: 'button', onclick: async () => {
       const t = Date.now(), until = kind === '5' ? (t5.value ? timeToTs(t5.value) : t + H5) : (fromLocal(tw.value) || t + 7 * DAY);
-      const d = { full: true, fullKind: kind, fullUntil: until, fullBy: myId(), fullAt: t, by: myId(), at: t };
+      const d = { full: true, fullKind: kind, fullUntil: until, fullBy: myId(), fullAt: t, by: myId(), at: t, auto: false };
       if (kind === '5') Object.assign(d, { p5: 100, p5At: t, r5: until }); else Object.assign(d, { pw: 100, pwAt: t });
       if (await act(() => BK.set('cb_accounts/' + ac, d, true), aname(ac) + ' 已標示為已滿')) closeSheet();
     } }, '回報已滿'));
@@ -981,24 +981,25 @@ function acctEditor() {
   const blocks = ACCTS.map(id => {
     const a = acct(id);
     const nm = h('input', { class: 'in', value: aname(id) });
+    const em = h('input', { class: 'in', type: 'email', value: a.email || '', placeholder: '登入 claude.ai 的信箱', autocomplete: 'off' });
     const p5 = numIn(a.p5), r5 = h('input', { type: 'datetime-local', class: 'in', value: toLocal(a.r5) });
     const pw = numIn(a.pw), wd = sel([['', '未設定']].concat(WD.map((t, i) => [i, t])), a.wDay), wt = h('input', { type: 'time', class: 'in', value: a.wTime || '' });
     const fl = h('input', { type: 'checkbox', style: 'width:22px;height:22px' }); fl.checked = !!a.full;
     const fu = h('input', { type: 'datetime-local', class: 'in', value: toLocal(a.fullUntil) });
     const save = h('button', { class: 'btn sm primary', type: 'button', onclick: async () => {
-      const t = Date.now(), d = { name: nm.value.trim() || DEF_ACCT[id], wDay: wd.value === '' ? null : Number(wd.value), wTime: wt.value || null, full: fl.checked, fullUntil: fromLocal(fu.value), r5: fromLocal(r5.value) };
+      const t = Date.now(), d = { name: nm.value.trim() || DEF_ACCT[id], email: em.value.trim().toLowerCase(), wDay: wd.value === '' ? null : Number(wd.value), wTime: wt.value || null, full: fl.checked, fullUntil: fromLocal(fu.value), r5: fromLocal(r5.value) };
       const n5 = pct(p5.value), nw = pct(pw.value);
       if (n5 !== (a.p5 == null ? null : a.p5)) { d.p5 = n5; d.p5At = n5 == null ? null : t; }
       if (nw !== (a.pw == null ? null : a.pw)) { d.pw = nw; d.pwAt = nw == null ? null : t; }
       if (fl.checked && !d.fullUntil) d.fullUntil = t + H5;
       if (fl.checked && !a.full) Object.assign(d, { fullKind: '5', fullBy: myId(), fullAt: t });
-      if (d.p5At || d.pwAt) Object.assign(d, { by: myId(), at: t });
+      if (d.p5At || d.pwAt) Object.assign(d, { by: myId(), at: t, auto: false });
       if (await act(() => BK.set('cb_accounts/' + id, d, true), aname(id) + ' 已儲存')) unkeep('accts');
     } }, '儲存');
-    return h('div', { class: 'ablk' }, field('名稱', nm), field('5 小時已用', p5, '%'), field('5 小時重置', r5), field('本週已用', pw, '%'),
+    return h('div', { class: 'ablk' }, field('名稱', nm), field('登入信箱', em), field('5 小時已用', p5, '%'), field('5 小時重置', r5), field('本週已用', pw, '%'),
       h('div', { class: 'field' }, h('span', null, '每週重置'), wd, wt), h('label', { class: 'field' }, h('span', null, '標示已滿'), fl, fu), h('div', null, save));
   });
-  return sec('帳號設定與額度修正', '「每週重置」照 claude.ai 用量頁寫的星期和時間填一次，之後會自動往後推。額度數字填錯可以在這裡改，清空就是「尚無回報」。', h('div', { class: 'agrid' }, blocks));
+  return sec('帳號設定與額度修正', '「每週重置」照 claude.ai 用量頁寫的星期和時間填一次，之後會自動往後推。額度數字填錯可以在這裡改，清空就是「尚無回報」。「登入信箱」填了，裝了自動回報的同仁用 Claude Code 時就會自動更新額度和每週重置。', h('div', { class: 'agrid' }, blocks));
 }
 
 function bindList() {
