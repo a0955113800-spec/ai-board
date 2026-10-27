@@ -26,13 +26,14 @@
    動效（有語意）：別人更新時那個帳號那一列閃一下淡黃；本週額度條從上次的長度長到新長度。 */
 :root{
   --ground:#f6f8f6;--surface:#fff;--raised:#f3f4f6;--border:#e5e7eb;--rule:#f2f2f2;--control:#d1d5db;
-  --text:#111827;--muted:#5f6672;--accent:#22684f;--mid:#6da48c;--soft:#edf6f1;--track:#cfe6da;--accent-ink:#134231;
+  --text:#111827;--muted:#525863;--accent:#22684f;--mid:#6da48c;--soft:#edf6f1;--track:#cfe6da;--accent-ink:#134231;
   --warm:#b4540a;--warm-mid:#d98f4e;--warm-soft:#fdf4ea;--warm-track:#f6dcc2;--warm-ink:#7a3807;
   --pos-bg:#fff;--pos-ink:#134231;--pos-line:#cfe6da;--idle-bg:#f3f4f6;--idle-ink:#4b5563;--flash:#fff7d6;
   --r-card:8px;--r-ctl:6px;--gap:24px;
 }
 *{box-sizing:border-box}
-html,body{margin:0;background:var(--ground);color:var(--text)}
+html,body{margin:0;color:var(--text)}
+html{background:var(--ground)} /* body 不上底色，背景的額度水位（z-index:-1）才透得出來 */
 body{font:14px/1.5 "DM Sans","Noto Sans TC","Microsoft JhengHei",system-ui,sans-serif;-webkit-text-size-adjust:100%}
 button{font:inherit;color:inherit;cursor:pointer}
 .num{font-variant-numeric:tabular-nums}
@@ -88,7 +89,7 @@ h1{font-size:32px;font-weight:700;margin:0;line-height:1.2}
 
 /* 主欄＋右側欄 */
 .grid{display:grid;grid-template-columns:minmax(0,1fr) 384px;gap:var(--gap);align-items:start}
-.main{display:grid;gap:16px}
+.main{display:grid;gap:16px;grid-template-columns:minmax(0,1fr);min-width:0}
 .card{background:var(--surface);border:1px solid var(--border);border-radius:var(--r-card)}
 .kpis{display:grid;grid-template-columns:repeat(3,minmax(0,1fr))}
 .kpi{padding:18px 20px}
@@ -219,7 +220,7 @@ table.t td.n{text-align:right;font-variant-numeric:tabular-nums;white-space:nowr
 .ablk .field>span:first-child{min-width:96px}
 .ablk .in{min-height:38px;padding:6px 10px;font-size:15px}
 
-@media (max-width:1100px){.grid{grid-template-columns:1fr}}
+@media (max-width:1100px){.grid{grid-template-columns:minmax(0,1fr)}}
 @media (max-width:760px){
   .app{grid-template-columns:1fr}.side{display:none}
   .ptop{display:flex;align-items:center;gap:12px;height:48px;padding:0 16px;border-bottom:1px solid var(--border);background:var(--ground);position:sticky;top:0;z-index:20}
@@ -236,6 +237,76 @@ table.t td.n{text-align:right;font-variant-numeric:tabular-nums;white-space:nowr
 }
 @media (prefers-reduced-motion:reduce){*,*::before,*::after{animation:none!important;transition:none!important}}
 
+
+/* 帳號分組：一個帳號一列，名牌（.nt）排成一排；自己綠框、正在用淡綠底加 ◐ */
+.gr{display:grid;grid-template-columns:200px minmax(0,1fr);gap:8px 16px;align-items:start;padding:14px 20px;border-top:1px solid var(--rule)}
+.gl2{display:flex;align-items:center;gap:8px;flex-wrap:wrap;min-height:30px}
+.gl2 b{font-size:15px;font-weight:600}
+.gl2 small{color:var(--muted);font-size:12px}
+.nts{display:flex;flex-wrap:wrap;gap:6px}
+.nt{display:inline-flex;align-items:baseline;gap:5px;min-height:30px;padding:4px 10px;border-radius:var(--r-ctl);border:1px solid var(--border);background:#fff;font-size:14px;line-height:1.4}
+.nt small{color:var(--muted);font-size:12px}
+.nt i{font-style:normal;color:var(--accent);font-size:12px}
+.nt em{font-style:normal;font-size:12px;color:var(--warm-ink)}
+.nt.on{background:var(--soft);border-color:var(--track);color:var(--accent-ink)}
+.nt.me{border-color:var(--accent);box-shadow:inset 0 0 0 1px var(--accent)}
+.empty0{color:var(--muted);font-size:13px;padding:5px 0}
+.vh{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0);white-space:nowrap}
+@media (max-width:760px){.gr{grid-template-columns:minmax(0,1fr);padding:12px 16px}}
+
+/* 預計使用（時間軸）：一個帳號一列；虛線框＝預計，自己的實線綠框；底部實心細條＝實際使用；橘線＝現在 */
+.tl-add{margin-left:auto}
+.tl-bar{padding:6px 20px 2px;overflow-x:auto}
+.tl-days{flex-wrap:nowrap}
+.tl-days button{white-space:nowrap;padding:0 10px}
+.tl-days small{color:var(--warm-ink);font-size:12px}
+.tl{padding:0 0 4px}
+.tl-in{min-width:620px;padding:6px 20px 0}
+.tl-axis,.tl-row{display:grid;grid-template-columns:76px minmax(0,1fr)}
+.tl-axis>div{position:relative;height:20px}
+.tl-axis>div span{position:absolute;transform:translateX(-50%);font-size:11px;color:var(--muted)}
+.tl-axis>div span:first-child{transform:none}
+.tl-axis>div span:last-child{transform:translateX(-100%)}
+.tl-row{border-top:1px solid var(--rule)}
+.tl-row>b{font-size:14px;font-weight:600;padding:10px 0 0 8px}
+.tl-row.alt,.tl-row.alt>b{background:#eef3f0} /* 帳號列一白一灰綠，區分哪一列是哪個帳號 */
+.tl-row>b,.tl-axis>span{position:sticky;left:0;z-index:3;background:var(--surface)} /* 左右滑時帳號名稱固定在左邊 */
+.tl-track{position:relative;background:repeating-linear-gradient(to right,rgba(17,24,39,.06) 0 1px,transparent 1px calc(100% / var(--n)))} /* 格線用半透明，白列和灰綠列上都看得到 */
+.pl{position:absolute;height:38px;display:flex;flex-direction:column;align-items:flex-start;justify-content:center;gap:1px;padding:0 7px;border:1px dashed var(--mid);border-radius:var(--r-ctl);background:#fff;color:var(--accent-ink);font-size:12.5px;line-height:1;overflow:hidden;white-space:nowrap;cursor:pointer;text-align:left}
+.pl b{font-weight:600}
+.pl b,.pl span{max-width:100%;overflow:hidden;text-overflow:ellipsis}
+.pl span{color:var(--muted);font-size:11.5px}
+.pl.me{border:1.5px solid var(--accent);background:var(--soft)}
+.pl:hover{border-style:solid}
+.ss{position:absolute;bottom:4px;height:5px;border-radius:3px;background:var(--mid)}
+.now{position:absolute;top:0;bottom:0;width:2px;margin-left:-1px;background:var(--warm)}
+.tl-key{display:flex;flex-wrap:wrap;gap:6px 16px;padding:8px 20px 14px;font-size:12px;color:var(--muted);align-items:center}
+.tl-key span{display:inline-flex;align-items:center;gap:6px}
+.tl-key i{display:inline-block;width:18px;height:10px;border-radius:3px}
+.k-pl{border:1px dashed var(--mid);background:#fff}
+.k-me{border:1.5px solid var(--accent);background:var(--soft)}
+.k-ss{height:5px!important;background:var(--mid)}
+.k-now{width:2px!important;height:12px!important;background:var(--warm);border-radius:0!important}
+.k-empty{margin-left:auto}
+@media (max-width:760px){.tl-bar{padding:6px 16px 2px}.tl-in{padding:6px 16px 0;min-width:780px}.tl-key{padding:8px 16px 12px}.k-empty{margin-left:0}}
+
+/* 加入主畫面小提醒：白底細框，跟「你正在用」的綠色提示分開 */
+.tip-a2hs{background:var(--surface);border-color:var(--border);color:var(--text)}
+.tip-a2hs b{color:var(--accent-ink)}
+.tip-a2hs .acts{margin-left:auto;display:flex;align-items:center;gap:12px}
+/* 額度水位背景：三個帳號平均已用多少，淡綠水面就漲到畫面多高（0% 只剩底部一道細浪）；過 90% 轉淡橘。
+   兩道浪一左一右慢慢漂（24 秒、38 秒一輪），水位變了才會漲退；卡片是白底，水只在縫隙和側欄透出來；
+   顏色用不透明的實色（＝主色疊在底色上的結果），浪和水面重疊處才不會疊出一條深線 */
+.tide{--tide:#a5c1b7;--tide-back:#ccdbd5;--tide-low:#b2cac1;position:fixed;left:0;right:0;bottom:0;z-index:-1;pointer-events:none;height:calc(22px + (100vh - 22px) * var(--lvl, 0) / 100);background:linear-gradient(var(--tide),var(--tide-low) 240px);transition:height 1.8s cubic-bezier(.2,.75,.2,1)}
+.tide.hot{--tide:#ddba9c;--tide-back:#e9d7c7;--tide-low:#e1c4aa}
+/* 直接浮在背景（水）上的灰字改深灰，水漲上來也讀得清楚 */
+.scope,.gl,.user small,.title p,.stamp{color:#3d4350}
+.tide::before,.tide::after{content:"";position:absolute;left:0;bottom:calc(100% - 1px);width:calc(100% + 240px);height:13px;background:var(--tide);transition:background-color 1.8s;
+  -webkit-mask:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 240 14' preserveAspectRatio='none'%3E%3Cpath d='M0 7C40 0 80 0 120 7S200 14 240 7V14H0Z'/%3E%3C/svg%3E") repeat-x 0 0/240px 100%;
+  mask:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 240 14' preserveAspectRatio='none'%3E%3Cpath d='M0 7C40 0 80 0 120 7S200 14 240 7V14H0Z'/%3E%3C/svg%3E") repeat-x 0 0/240px 100%;
+  animation:tide 24s linear infinite}
+.tide::before{height:22px;background:var(--tide-back);animation-duration:38s;animation-direction:reverse} /* 後浪：較高、較淡、反向 */
+@keyframes tide{to{transform:translateX(-240px)}}
 /* 下拉重新整理（主畫面 app）：白色膠囊從頂端滑下，圓環跟著拉的距離轉，過門檻變綠框，放開後轉圈並重新載入 */
 html.home{overscroll-behavior-y:none}
 .ptr{position:fixed;left:50%;top:calc(env(safe-area-inset-top) + 10px);z-index:95;display:flex;align-items:center;gap:8px;height:34px;padding:0 14px 0 10px;border-radius:999px;background:#fff;border:1px solid var(--border);color:var(--muted);font-size:13px;transform:translate(-50%,-52px);opacity:0;pointer-events:none}
@@ -332,7 +403,7 @@ const MIN = 6e4, HR = 36e5, H3 = 3 * HR, H5 = 5 * HR, DAY = 864e5;
 const SYM = { ok: '●', busy: '◐', full: '×', idle: '？' };
 const REDUCE = matchMedia('(prefers-reduced-motion: reduce)').matches;
 
-const S = { user: null, admin: false, bind: null, access: null, members: [], accts: {}, recent: [], open: [], logins: [], binds: [], tab: 'home', week: 0 };
+const S = { user: null, admin: false, bind: null, access: null, members: [], accts: {}, recent: [], open: [], logins: [], binds: [], plans: [], planDay: 0, tab: 'home', week: 0 };
 const root = document.getElementById('app');
 
 /* ---------- 小工具 ---------- */
@@ -510,6 +581,9 @@ function start() {
   W('cb_sessions', ['start', '>=', weekStart(Date.now()) - 8 * DAY], l => { S.recent = l; });
   W('cb_sessions', ['end', '==', null], l => { S.open = l; });
   W('cb_login', ['done', '==', false], l => { S.logins = l.sort((a, b) => a.at - b.at); });
+  // 預計使用：資料庫規則還沒開通時只讓這一區顯示「還沒開通」，不影響整個看板
+  S.plansOff = false;
+  unsubs.push(BK.watch('cb_plans', ['end', '>=', todayStart()], l => { S.plans = l; render(); }, () => { S.plansOff = true; render(); }));
   if (S.admin) {
     W('cb_bind', null, l => { S.binds = l; });
     W('cb_config', null, l => { const a = l.find(d => d.id === 'access'); if (a) S.access = a; });
@@ -532,6 +606,7 @@ function draw() {
   root.replaceChildren(h('div', { class: 'app' }, sidebar(), h('div', null, ptop(), page)));
   window.scrollTo(0, y);
   motion();
+  tide(tideLvl());
   const n = S.admin ? S.logins.length : 0;
   document.title = (n ? '(' + n + ') ' : '') + '小郭組 AI 帳號看板';
 }
@@ -545,6 +620,15 @@ function motion() {
     if (prevSig[id] != null && prevSig[id] !== sig && Date.now() - lastLocal > 2500) el.classList.add('flash');
     prevSig[id] = sig;
   });
+}
+// 背景水位：三個帳號平均已用多少（5 小時、本週取較緊的那個；已滿算 100、沒數字算 0）
+const tideLvl = () => Math.round(ACCTS.reduce((t, id) => t + 100 - quota(acct(id)).rem, 0) / ACCTS.length);
+let tideEl = null;
+function tide(p) {
+  // 水面只建一次放在 body 最前面，重畫時不重建，浪才不會每 30 秒跳回原點；第一次從底部漲上來
+  if (!tideEl) { tideEl = h('div', { class: 'tide', 'aria-hidden': 'true' }); document.body.prepend(tideEl); tideEl.getBoundingClientRect(); }
+  tideEl.style.setProperty('--lvl', p);
+  tideEl.classList.toggle('hot', p >= 90);
 }
 // 倒數數字變了就往上翻一格
 function rollTo(key, txt) {
@@ -595,7 +679,8 @@ function homePage() {
     : [B('我要登入', () => loginSheet(m)), B('開始使用', () => startSheet(m), 'primary')];
   const d = new Date();
   out.append(h('div', { class: 'title' }, h('div', null, h('h1', null, '帳號看板'), h('p', null, suggestion(m))), h('div', { class: 'act' }, acts)));
-  out.append(h('div', { class: 'stamp num' }, (d.getMonth() + 1) + '/' + d.getDate() + '（' + WD[d.getDay()].slice(1) + '）' + hm(d) + ' 更新．大家的回報會即時出現'));
+  out.append(h('div', { class: 'stamp num' }, (d.getMonth() + 1) + '/' + d.getDate() + '（' + WD[d.getDay()].slice(1) + '）' + hm(d) + ' 更新．大家的回報會即時出現．背景水位＝三個帳號平均已用 ' + tideLvl() + '%'));
+  const tip = homeTip(); if (tip) out.append(tip);
   if (s) out.append(h('div', { class: 'note' }, h('b', null, '◐ 你正在用 ' + aname(s.acct)), s.borrow ? tag('借用', 'warm') : null, s.proxy ? tag('代登記') : null,
     h('span', { class: 'num' }, hm(s.start) + ' 起．已 ' + dur(Date.now() - s.start) + (s.purpose ? '．' + s.purpose : '')),
     stale(s) ? h('span', { class: 'warn' }, '超過 3 小時沒有動作，看板上顯示「可能忘了結束」；還在用請按「我還在用」。') : null));
@@ -605,9 +690,132 @@ function homePage() {
   out.append(h('div', { class: 'grid' },
     h('div', { class: 'main' }, kpis(),
       h('section', { class: 'card' }, h('div', { class: 'ch' }, h('h2', null, '5 小時額度'), h('small', null, '已用；一格 5%，越往右越深，過了虛線（90%）轉橘就是快滿')), ACCTS.map(id => quotaRow(id, m))),
-      h('section', { class: 'card' }, h('div', { class: 'ch' }, h('h2', null, '本週額度'), h('small', null, '已用')), ACCTS.map(weekRow))),
+      h('section', { class: 'card' }, h('div', { class: 'ch' }, h('h2', null, '本週額度'), h('small', null, '已用')), ACCTS.map(weekRow)),
+      timeline(m), groups(m)),
     rail()));
   return out;
+}
+
+// 帳號分組：每個帳號一列，列出固定用它的人；正在用的人標 ◐（用別的帳號就標「在 某帳號」），自己的名牌是綠框
+function groups(m) {
+  const fresh = S.open.filter(s => !stale(s));
+  const tagOf = p => {
+    const s = fresh.find(x => x.mid === p.id);
+    return h('span', { class: 'nt' + (p.id === m.id ? ' me' : '') + (s ? ' on' : '') },
+      s ? h('i', { 'aria-hidden': 'true' }, SYM.busy) : null, p.name,
+      s && s.acct !== p.acct ? h('em', null, '在 ' + aname(s.acct)) : null,
+      p.id === m.id ? h('span', { class: 'vh' }, '（你）') : null);
+  };
+  const row = (label, list, id) => h('div', { class: 'gr' },
+    h('div', { class: 'gl2' }, h('b', null, label), id ? h('span', { class: 'pill ' + state(id).k }, SYM[state(id).k] + ' ' + state(id).txt) : null, h('small', { class: 'num' }, list.length + ' 人')),
+    h('div', { class: 'nts' }, list.length ? list.map(tagOf) : h('span', { class: 'empty0' }, '還沒有人')));
+  const of = id => S.members.filter(p => p.acct === id);
+  const none = S.members.filter(p => !ACCTS.includes(p.acct));
+  return h('section', { class: 'card' }, h('div', { class: 'ch' }, h('h2', null, '帳號分組'), h('small', null, '每個帳號固定由哪些人使用；◐ 是現在正在用')),
+    ACCTS.map(id => row(aname(id), of(id), id)), none.length ? row('未分組', none) : null);
+}
+
+/* ---------- 預計使用（時間軸） ---------- */
+// 一個帳號一列，橫軸是時間（預設 08–22，有登記超出就加寬）；虛線框＝預計，底下實心細條＝實際使用，橘線＝現在
+const dayLabel = off => { const t = todayStart() + off * DAY, d = new Date(t); return off === 0 ? '今天' : off === 1 ? '明天' : WD[d.getDay()] + ' ' + (d.getMonth() + 1) + '/' + d.getDate(); };
+const canEditPlan = p => S.admin || p.mid === myId();
+const shortT = t => { const d = new Date(t); return d.getMinutes() ? d.getHours() + ':' + pad(d.getMinutes()) : String(d.getHours()); }; // 整點只寫「14」，框比較放得下
+let tlScroll = null;
+function timeline(m) {
+  const off = S.planDay, d0 = todayStart() + off * DAY, d1 = d0 + DAY, t = Date.now();
+  const plans = S.plans.filter(p => p.end > d0 && p.start < d1);
+  const sess = off === 0 ? allSess().filter(s => s.start < d1 && (s.end || t) > d0) : [];
+  const hrs = plans.map(p => [p.start, p.end]).concat(sess.map(s => [s.start, s.end || t]));
+  let h0 = 8, h1 = 22;
+  hrs.forEach(([a, b]) => { h0 = Math.min(h0, Math.floor((Math.max(a, d0) - d0) / HR)); h1 = Math.max(h1, Math.ceil((Math.min(b, d1) - d0) / HR)); });
+  h0 -= h0 % 2; h1 += h1 % 2; // 刻度每 2 小時一個，頭尾都對齊到偶數整點
+  const x = v => ((Math.min(Math.max(v, d0 + h0 * HR), d0 + h1 * HR) - d0 - h0 * HR) / ((h1 - h0) * HR) * 100);
+  const days = h('div', { class: 'seg tl-days', role: 'tablist' }, [0, 1, 2, 3, 4, 5, 6].map(i => {
+    const n = S.plans.filter(p => p.end > todayStart() + i * DAY && p.start < todayStart() + (i + 1) * DAY).length;
+    return h('button', { type: 'button', role: 'tab', 'aria-selected': i === off ? 'true' : 'false', class: i === off ? 'on' : '', onclick: () => { S.planDay = i; tlScroll = null; render(); } }, dayLabel(i), n ? h('small', { class: 'num' }, ' ' + n) : null);
+  }));
+  const axis = h('div', { class: 'tl-axis num' }, h('span'), h('div', null, Array.from({ length: h1 - h0 + 1 }, (_, i) => h0 + i).filter(v => v % 2 === 0).map(v => h('span', { style: 'left:' + ((v - h0) / (h1 - h0) * 100) + '%' }, pad(v) + ':00'))));
+  const rows = ACCTS.map((id, i) => {
+    const mine = plans.filter(p => p.acct === id).sort((a, b) => a.start - b.start), ends = [];
+    const blocks = mine.map(p => {
+      let lane = ends.findIndex(e => e <= p.start); if (lane < 0) lane = ends.length; ends[lane] = p.end;
+      const l = x(p.start), w = Math.max(x(p.end) - l, 1.5);
+      return h('button', { type: 'button', class: 'pl' + (p.mid === m.id ? ' me' : ''), style: 'left:' + l + '%;width:' + w + '%;top:' + (lane * 42 + 6) + 'px', title: mname(p.mid, p.name) + ' ' + hm(p.start) + '–' + hm(p.end) + (p.note ? '．' + p.note : ''), onclick: () => planInfo(p) },
+        h('b', null, mname(p.mid, p.name)), h('span', { class: 'num' }, shortT(p.start) + '–' + shortT(p.end)));
+    });
+    const bars = sess.filter(s => s.acct === id).map(s => h('i', { class: 'ss', style: 'left:' + x(s.start) + '%;width:' + Math.max(x(s.end || t) - x(s.start), 0.8) + '%', title: mname(s.mid, s.name) + ' 實際 ' + hm(s.start) + '–' + (s.end ? hm(s.end) : '使用中') }));
+    const now = off === 0 && t > d0 + h0 * HR && t < d0 + h1 * HR ? h('i', { class: 'now', style: 'left:' + x(t) + '%' }) : null;
+    return h('div', { class: 'tl-row' + (i % 2 ? ' alt' : '') }, h('b', null, aname(id)),
+      h('div', { class: 'tl-track', style: '--n:' + (h1 - h0) + ';height:' + (Math.max(1, ends.length) * 42 + 16) + 'px' }, blocks, bars, now));
+  });
+  const sc = h('div', { class: 'tl tw', onscroll: e => { tlScroll = e.target.scrollLeft; } }, h('div', { class: 'tl-in' }, axis, rows));
+  // 手機上時間軸可以左右滑：重畫時保留位置，第一次打開今天就捲到現在
+  requestAnimationFrame(() => { if (!sc.isConnected) return; sc.scrollLeft = tlScroll != null ? tlScroll : off === 0 ? Math.max(0, sc.scrollWidth * x(t) / 100 - sc.clientWidth / 3) : 0; });
+  return h('section', { class: 'card' },
+    h('div', { class: 'ch' }, h('h2', null, '預計使用'), h('small', null, '登記你預計什麼時候用哪個帳號，大家都看得到'),
+      h('button', { class: 'btn sm primary tl-add', type: 'button', onclick: () => planSheet(m) }, '登記時段')),
+    S.plansOff ? h('div', { class: 'empty' }, '預計使用還沒開通：管理者要先更新資料庫規則。') : [h('div', { class: 'tl-bar' }, days), sc,
+      h('div', { class: 'tl-key' }, h('span', null, h('i', { class: 'k-pl' }), '預計'), h('span', null, h('i', { class: 'k-me' }), '我的預計'), off === 0 ? h('span', null, h('i', { class: 'k-ss' }), '實際使用') : null, off === 0 ? h('span', null, h('i', { class: 'k-now' }), '現在') : null,
+        !plans.length ? h('span', { class: 'k-empty' }, dayLabel(off) + '還沒有人登記') : null)]);
+}
+function planInfo(p) {
+  sheet('預計使用', [h('p', null, h('b', null, mname(p.mid, p.name)), ' 預計用 ', h('b', null, aname(p.acct))),
+    h('p', { class: 'num' }, whenW(p.start) + ' – ' + hm(p.end) + '（' + dur(p.end - p.start) + '）'),
+    p.note ? h('p', { class: 'muted' }, p.note) : null],
+    canEditPlan(p) ? [h('button', { class: 'btn danger big wide', type: 'button', onclick: async () => { if (await act(() => BK.del('cb_plans/' + p.id), '已刪除這個登記')) closeSheet(); } }, '刪除這個登記'),
+      h('button', { class: 'btn ghost big wide', type: 'button', onclick: closeSheet }, '關閉')] : h('button', { class: 'btn ghost big wide', type: 'button', onclick: closeSheet }, '關閉'));
+}
+function planSheet(m) {
+  let ac = m.acct || 'a1';
+  const nx = new Date(Math.ceil((Date.now() + 5 * MIN) / (30 * MIN)) * 30 * MIN);
+  const day = sel([0, 1, 2, 3, 4, 5, 6].map(i => [i, dayLabel(i)]), S.planDay, { 'aria-label': '日期' });
+  const t1 = h('input', { type: 'time', class: 'in', step: '900', value: S.planDay === 0 ? hm(nx) : '09:00', 'aria-label': '開始' });
+  const t2 = h('input', { type: 'time', class: 'in', step: '900', value: S.planDay === 0 ? hm(nx.getTime() + 2 * HR) : '11:00', 'aria-label': '結束' });
+  const note = h('input', { class: 'in w', maxlength: '30', placeholder: '例如：寫期末報告、整理會議紀錄', 'aria-label': '備註' });
+  const warn = h('div', { class: 'warn' });
+  const range = () => {
+    const d = todayStart() + Number(day.value) * DAY, [a, b] = [t1.value, t2.value].map(v => v ? v.split(':').map(Number) : null);
+    if (!a || !b) return null;
+    const s = d + a[0] * HR + a[1] * MIN; let e = d + b[0] * HR + b[1] * MIN; if (e <= s) e += DAY; // 結束比開始早＝跨到隔天
+    return [s, e];
+  };
+  const check = () => {
+    const r = range(); if (!r) { warn.textContent = ''; return; }
+    const hit = S.plans.filter(p => p.acct === ac && p.start < r[1] && p.end > r[0]).map(p => mname(p.mid, p.name) + ' ' + hm(p.start) + '–' + hm(p.end));
+    warn.textContent = hit.length ? '同時段 ' + aname(ac) + ' 也有人登記：' + hit.join('、') + '。可以一起用，但額度是共用的。' : '';
+  };
+  [day, t1, t2].forEach(el => el.addEventListener('change', check));
+  sheet('登記時段', [h('div', { class: 'lab' }, '用哪個帳號'), acctPicker(ac, m.acct, id => { ac = id; check(); }),
+    field('日期', day), h('div', { class: 'field' }, h('span', null, '時間'), t1, h('span', { class: 'muted' }, '到'), t2),
+    field('備註', note), warn],
+    h('button', { class: 'btn primary big wide', type: 'button', onclick: async () => {
+      const r = range();
+      if (!r) { toast('請填開始和結束時間'); return; }
+      if (r[1] <= Date.now()) { toast('這個時段已經過了'); return; }
+      if (r[1] - r[0] > 12 * HR) { toast('一次最多登記 12 小時'); return; }
+      const ok = await act(() => BK.add('cb_plans', { mid: m.id, name: m.name, acct: ac, start: r[0], end: r[1], note: note.value.trim(), by: myId(), at: Date.now() }), '已登記：' + aname(ac) + ' ' + hm(r[0]) + '–' + hm(r[1]));
+      if (ok) { S.planDay = Math.floor((r[0] - todayStart()) / DAY); tlScroll = null; closeSheet(); render(); }
+    } }, '登記'));
+  check();
+}
+
+// 加入主畫面的小提醒：只在手機瀏覽器、還沒加過、沒按過「知道了」時出現；Android 可以直接跳出安裝視窗
+let installEvt = null;
+addEventListener('beforeinstallprompt', e => { e.preventDefault(); installEvt = e; render(); });
+addEventListener('appinstalled', () => { installEvt = null; render(); });
+const TIP_OFF = 'cb-a2hs-off';
+function homeTip() {
+  const home = navigator.standalone === true || matchMedia('(display-mode: standalone)').matches;
+  let off = false; try { off = localStorage.getItem(TIP_OFF) === '1'; } catch (_) {}
+  if (home || off || !matchMedia('(pointer:coarse)').matches || innerWidth > 900) return null;
+  const ios = /iPhone|iPad|iPod/.test(navigator.userAgent) || (/Macintosh/.test(navigator.userAgent) && navigator.maxTouchPoints > 1);
+  const how = ios ? '用 Safari 開，按下方「分享」→「加入主畫面」。' : installEvt ? '' : '按瀏覽器右上角「⋮」→「加到主畫面」或「安裝應用程式」。';
+  const hide = () => { try { localStorage.setItem(TIP_OFF, '1'); } catch (_) {} render(); };
+  return h('div', { class: 'note tip-a2hs' }, h('b', null, '小提醒'),
+    h('span', null, '把看板加入手機主畫面，之後點圖示就能直接打開，登記時段、回報額度更方便。' + how),
+    h('span', { class: 'acts' },
+      installEvt ? h('button', { class: 'btn sm primary', type: 'button', onclick: async () => { const e = installEvt; installEvt = null; e.prompt(); try { const r = await e.userChoice; if (r && r.outcome === 'accepted') hide(); else render(); } catch (_) { render(); } } }, '加入主畫面') : null,
+      h('button', { class: 'link', type: 'button', onclick: hide }, '知道了')));
 }
 
 function suggestion(m) {
