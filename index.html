@@ -317,6 +317,61 @@ html.home{overscroll-behavior-y:none}
 @keyframes ptrspin{to{transform:rotate(360deg)}}
 @media (prefers-reduced-motion:reduce){.ptr.spin i{animation:none}.ptr.back{transition:none}}
 
+/* 用量統計（2026-11-11）：日／週／月切換、播放重播、數字跳動；帳號色經 dataviz 驗證：#178257 綠、#2a78d6 藍、#b8860b 芥末金 */
+.st-ctl{margin-left:auto;display:flex;gap:10px;align-items:center;flex-wrap:wrap;flex:none}
+.st-nav{display:flex;align-items:center;gap:6px}
+.st-nav b{font-size:14px;font-weight:600;min-width:7.5em;text-align:center}
+.st-nav .btn{width:32px;padding:0;font-size:16px}
+.st-nav .btn:disabled{opacity:.35;cursor:default}
+.st-play{min-width:84px}
+.st-k{grid-template-columns:repeat(4,minmax(0,1fr))}
+.st-k .v{font-variant-numeric:normal}
+.st-leg{display:flex;gap:14px;font-size:12px;color:var(--muted);flex-wrap:wrap}
+.st-leg i{display:inline-block;width:10px;height:10px;border-radius:3px;margin-right:6px;vertical-align:-1px}
+.st-tb{margin-left:auto;font-size:13px;color:var(--accent-ink)}
+.chart{width:100%}
+.st-main{height:300px;padding:0 8px 6px}
+.st-rank{padding:2px 8px 10px}
+.st-heat{height:300px;padding:0 8px 6px}
+.st-row{display:grid;grid-template-columns:minmax(0,1.25fr) minmax(0,1fr);gap:16px;align-items:start}
+.st-share{padding:10px 20px 6px}
+.sbar{display:flex;gap:2px;height:28px;background:var(--raised);border-radius:4px}
+.sbar i{display:flex;align-items:center;padding:0 8px;color:#fff;font-size:12px;font-weight:600;font-style:normal;width:0;border-radius:4px;white-space:nowrap;transition:width .9s cubic-bezier(.2,.75,.2,1)}
+.srow{display:grid;grid-template-columns:auto minmax(0,1fr) auto auto;gap:4px 14px;align-items:center;font-size:13px;padding-top:10px}
+.srow .dot{width:10px;height:10px;border-radius:3px}
+.srow b{font-weight:500}
+.srow .r{text-align:right;font-variant-numeric:tabular-nums}
+.srow .c{color:var(--muted);min-width:3.5em}
+.st-purp{padding:4px 20px 18px;display:grid;gap:10px}
+.pr{display:grid;grid-template-columns:6.5em minmax(0,1fr) 4.5em;gap:10px;align-items:center;font-size:13px}
+.pr .bar{height:8px;background:var(--raised);border-radius:4px;position:relative}
+.pr .bar b{position:absolute;inset:0 auto 0 0;border-radius:4px;background:#178257;transition:width .9s cubic-bezier(.2,.75,.2,1)}
+.pr .r{text-align:right;color:var(--muted)}
+.st-table{padding:0 20px 16px;overflow-x:auto}
+.st-qseg{padding:2px}
+.st-qseg button{height:26px;padding:0 10px;font-size:13px}
+.st-qf{margin:6px 20px 0;font-size:14px}
+.st-qs{display:flex;flex-wrap:wrap;gap:6px 22px;padding:8px 20px 2px;font-size:13px}
+.q1{display:flex;align-items:center;gap:6px}
+.q1 i{width:10px;height:10px;border-radius:3px;flex:none}
+.q1 b{font-weight:500}
+.q1 span{color:var(--muted)}
+.st-q{height:280px;padding:0 8px}
+.st-qn{margin:0 20px 16px;font-size:12px;color:var(--muted);line-height:1.6}
+@media (max-width:1100px){.st-row{grid-template-columns:minmax(0,1fr)}}
+@media (max-width:760px){
+  .stats .title .st-ctl{margin:12px 0 0;width:100%;justify-content:space-between}
+  .st-nav{flex:1;justify-content:center}
+  .st-k{grid-template-columns:1fr 1fr}
+  .st-k .kpi:first-child{grid-column:auto;border-bottom:0}
+  .st-k .kpi:nth-child(n+3){border-top:1px solid var(--border)}
+  .st-k .kpi:nth-child(even){border-left:1px solid var(--border)}
+  .st-k .kpi:nth-child(odd){border-left:0}
+  .st-main{height:240px}.st-heat{height:280px}.st-q{height:240px}
+  .st-tb{margin-left:0}
+  .st-qs{gap:4px 16px}
+}
+
 </style>
 </head>
 <body>
@@ -577,7 +632,7 @@ function start() {
   const err = e => { if (failed) return; failed = true; stopAll(); if (/permission/i.test((e && (e.code || e.message)) || '')) boot(); else fail(e); };
   const W = (c, w, f) => unsubs.push(BK.watch(c, w, l => { f(l); render(); }, err));
   W('cb_members', null, l => { S.members = l.sort((a, b) => (a.order || 0) - (b.order || 0)); });
-  W('cb_accounts', null, l => { S.accts = {}; l.forEach(a => { S.accts[a.id] = a; }); });
+  W('cb_accounts', null, l => { S.accts = {}; l.forEach(a => { S.accts[a.id] = a; }); qLog(l); });
   W('cb_sessions', ['start', '>=', weekStart(Date.now()) - 8 * DAY], l => { S.recent = l; });
   W('cb_sessions', ['end', '==', null], l => { S.open = l; });
   W('cb_login', ['done', '==', false], l => { S.logins = l.sort((a, b) => a.at - b.at); });
@@ -602,11 +657,12 @@ function draw() {
   const ae = document.activeElement;
   if (ae && root.contains(ae) && /^(INPUT|SELECT|TEXTAREA)$/.test(ae.tagName)) return;
   const y = window.scrollY;
-  const page = S.tab === 'admin' && S.admin ? adminPage() : homePage();
+  const page = S.tab === 'admin' && S.admin ? adminPage() : S.tab === 'stats' ? statsPage() : homePage();
   root.replaceChildren(h('div', { class: 'app' }, sidebar(), h('div', null, ptop(), page)));
   window.scrollTo(0, y);
   motion();
   tide(tideLvl());
+  if (S.tab === 'stats') updateStats(); else stopPlay();
   const n = S.admin ? S.logins.length : 0;
   document.title = (n ? '(' + n + ') ' : '') + '小郭組 AI 帳號看板';
 }
@@ -652,14 +708,18 @@ function sidebar() {
     h('div', { class: 'brand' }, svg(MARK), '小郭組 AI 帳號'),
     h('div', { class: 'scope' }, '長豐工程顧問 規劃部門．' + S.members.length + ' 人'),
     nav('home', '看板', ICO_BOARD),
+    nav('stats', '用量統計', ICO_STATS),
     S.admin ? h('div', { class: 'gl' }, '管理') : null,
     S.admin ? nav('admin', '後台', ICO_ADMIN, S.logins.length) : null,
     h('div', { class: 'user' }, h('span', { class: 'av' }, m ? m.name.slice(-1) : '？'),
       h('span', null, m ? m.name : '', h('small', null, S.admin ? '管理者．' : '', h('button', { class: 'link', type: 'button', onclick: logout }, '登出')))));
 }
 function ptop() {
-  return h('div', { class: 'ptop' }, svg(MARK), h('b', null, S.tab === 'admin' ? '後台' : '帳號看板'), h('span', { class: 'sp' }),
-    S.admin ? h('button', { class: 'link', type: 'button', onclick: goTab(S.tab === 'admin' ? 'home' : 'admin') }, S.tab === 'admin' ? '回看板' : '後台' + (S.logins.length ? '（' + S.logins.length + '）' : '')) : null,
+  const L = (k, t) => h('button', { class: 'link', type: 'button', onclick: goTab(k) }, t);
+  return h('div', { class: 'ptop' }, svg(MARK), h('b', null, S.tab === 'admin' ? '後台' : S.tab === 'stats' ? '用量統計' : '帳號看板'), h('span', { class: 'sp' }),
+    S.tab !== 'home' ? L('home', '看板') : null,
+    S.tab !== 'stats' ? L('stats', '統計') : null,
+    S.admin && S.tab !== 'admin' ? L('admin', '後台' + (S.logins.length ? '（' + S.logins.length + '）' : '')) : null,
     h('button', { class: 'link', type: 'button', onclick: logout }, '登出'));
 }
 
@@ -916,7 +976,407 @@ function rail() {
       h('span', null, mname(s.mid, s.name), h('small', null, aname(s.acct) + (s.purpose ? '．' + s.purpose : '') + (s.borrow ? '．借用' : ''))), h('span', { class: 'sp' }),
       h('span', { class: 't num' + (s.end ? '' : ' on') }, hm(s.start) + '–' + (s.end ? hm(s.end) : stale(s) ? '可能忘了結束' : '使用中')))) : h('div', { class: 'empty' }, '今天還沒有人用。'),
       today.length > 6 ? h('button', { class: 'more', type: 'button', onclick: () => { S.logAll = !S.logAll; render(); } }, S.logAll ? '收起' : '今天全部（' + today.length + ' 次）') : null,
-      S.admin ? h('button', { class: 'more', type: 'button', onclick: goTab('admin') }, '到後台看統計與每週紀錄') : null));
+      h('button', { class: 'more', type: 'button', onclick: goTab('stats') }, '看每日、每週、每月用量統計')));
+}
+
+/* ---------- 用量統計 ---------- */
+// 使用時間來自簽到紀錄（cb_sessions）：每次從開始到結束（沒按結束就算到最後動作＋3 小時）。
+// 額度走勢來自 cb_quota（下面 qLog 記的）：帳號文件只留最新一筆額度，所以開著看板的人看到額度變動就順手記一筆。
+// 圖表用 ECharts（cdnjs，打開統計頁才載入）。整頁每 30 秒重畫，統計頁的節點只建一次、之後原地更新，動畫才不會一直重來。
+const EC_URL = 'https://cdnjs.cloudflare.com/ajax/libs/echarts/5.6.0/echarts.min.js';
+// 帳號色經 dataviz 驗證（白底、三色全配對：色盲 ΔE≥9.4、一般 ΔE≥19.4、對比≥3:1）；橘色留給「快滿」與「現在」，不當帳號色
+const AC_COLOR = { a1: '#178257', a2: '#2a78d6', a3: '#b8860b' };
+const HEAT = ['#f1f7f3', '#cfe6da', '#9fcab4', '#5fa585', '#2b7c59', '#134231'];
+const ST_KEY = 'cb-st-per';
+const ST = { per: 'week', off: 0, el: null, ui: {}, ch: {}, hist: null, err: '', unsub: null, play: null, shown: {}, tableOn: false,
+  qh: null, qerr: '', qunsub: null, qFrom: Infinity, qreg: false, qk: null, qTbl: false };
+try { const v = localStorage.getItem(ST_KEY); if (['day', 'week', 'month'].includes(v)) ST.per = v; } catch (_) {}
+let ecP = null;
+const loadEC = () => ecP || (ecP = new Promise((ok, no) => {
+  if (window.echarts) return ok(window.echarts);
+  const sc = document.createElement('script'); sc.src = EC_URL; sc.async = true;
+  sc.onload = () => ok(window.echarts); sc.onerror = () => { ecP = null; no(new Error('load')); };
+  document.head.append(sc);
+}));
+// 打開統計頁才訂閱一年多的紀錄；登出（stopAll）時一併取消
+function ensureHist() {
+  if (ST.unsub) return;
+  ST.err = '';
+  ST.unsub = BK.watch('cb_sessions', ['start', '>=', Date.now() - 400 * DAY], l => { ST.hist = l; render(); }, () => { ST.err = '讀不到使用紀錄，請重新整理。'; render(); });
+  unsubs.push(() => { if (ST.unsub) ST.unsub(); ST.unsub = null; ST.hist = null; });
+}
+const fmtD = t => { const d = new Date(t); return (d.getMonth() + 1) + '/' + d.getDate(); };
+const wd1 = t => WD[new Date(t).getDay()].slice(1);
+// 一段期間：起訖、上一期、格子（日＝每小時、週與月＝每天）、單位
+function stRange(per, off) {
+  if (per === 'day') {
+    const s = todayStart() + off * DAY;
+    return { s, e: s + DAY, ps: s - DAY, step: HR, n: 24, unit: '分鐘', div: MIN,
+      name: off === 0 ? '今天' : off === -1 ? '昨天' : fmtD(s) + '（' + wd1(s) + '）', prev: off === 0 ? '昨天同一時間' : '前一天', cur: off === 0,
+      label: fmtD(s) + '（' + wd1(s) + '）', xl: i => pad(i), tip: i => pad(i) + ':00–' + pad((i + 1) % 24) + ':00', now: off === 0 ? new Date().getHours() : -1 };
+  }
+  if (per === 'week') {
+    const s = weekStart(Date.now()) + off * 7 * DAY;
+    return { s, e: s + 7 * DAY, ps: s - 7 * DAY, step: DAY, n: 7, unit: '小時', div: HR,
+      name: off === 0 ? '本週' : off === -1 ? '上週' : fmtD(s) + ' 那週', prev: off === 0 ? '上週同期' : '前一週', cur: off === 0,
+      label: fmtD(s) + '–' + fmtD(s + 6 * DAY), xl: i => wd1(s + i * DAY) + '\n' + fmtD(s + i * DAY), tip: i => fmtD(s + i * DAY) + '（' + wd1(s + i * DAY) + '）',
+      now: off === 0 ? Math.floor((todayStart() - s) / DAY) : -1 };
+  }
+  const d0 = new Date(), m0 = new Date(d0.getFullYear(), d0.getMonth() + off, 1), s = m0.getTime();
+  const e = new Date(m0.getFullYear(), m0.getMonth() + 1, 1).getTime();
+  return { s, e, ps: new Date(m0.getFullYear(), m0.getMonth() - 1, 1).getTime(), step: DAY, n: Math.round((e - s) / DAY), unit: '小時', div: HR,
+    name: off === 0 ? '本月' : off === -1 ? '上個月' : (m0.getMonth() + 1) + ' 月', prev: off === 0 ? '上個月同期' : '前一個月', cur: off === 0,
+    label: m0.getFullYear() + ' 年 ' + (m0.getMonth() + 1) + ' 月', xl: i => String(i + 1), tip: i => fmtD(s + i * DAY) + '（' + wd1(s + i * DAY) + '）',
+    now: off === 0 ? d0.getDate() - 1 : -1 };
+}
+const ivl = s => [s.start, s.end || Math.min(Date.now(), lastAct(s) + H3)];
+const stList = () => { const m = new Map(); (ST.hist || []).concat(S.open).forEach(s => m.set(s.id, s)); return [...m.values()].filter(s => ACCTS.includes(s.acct)); };
+// 把每次使用的時間切進格子：帳號×格、人×格、用途、次數；另外算上一期的總數做比較
+function stCalc(R) {
+  const A = {}, P = {}, PU = {}, nB = Array(R.n).fill(0), ppl = new Set(), pppl = new Set();
+  ACCTS.forEach(id => { A[id] = Array(R.n).fill(0); });
+  let tot = 0, cnt = 0, ptot = 0, pcnt = 0;
+  // 進行中的這一期只跟上一期「同樣經過的時間」比，免得拿半週去比整週
+  const pe = R.cur ? R.ps + Math.min(Date.now() - R.s, R.s - R.ps) : R.s;
+  for (const s of stList()) {
+    const [a0, b0] = ivl(s);
+    if (Math.min(b0, pe) > Math.max(a0, R.ps)) ptot += Math.min(b0, pe) - Math.max(a0, R.ps);
+    if (s.start >= R.ps && s.start < pe) { pcnt++; pppl.add(s.mid); }
+    if (s.start >= R.s && s.start < R.e) { cnt++; ppl.add(s.mid); nB[Math.floor((s.start - R.s) / R.step)]++; }
+    const a = Math.max(a0, R.s), b = Math.min(b0, R.e);
+    if (b <= a) continue;
+    tot += b - a;
+    const k = s.mid || s.name;
+    if (!P[k]) P[k] = { name: mname(s.mid, s.name), mid: s.mid, b: Array(R.n).fill(0) };
+    const u = s.purpose || '未填'; PU[u] = (PU[u] || 0) + b - a;
+    for (let t = a; t < b;) { const i = Math.min(R.n - 1, Math.floor((t - R.s) / R.step)), te = Math.min(b, R.s + (i + 1) * R.step); A[s.acct][i] += te - t; P[k].b[i] += te - t; t = te; }
+  }
+  return { A, P, PU, nB, tot, cnt, ppl: ppl.size, ptot, pcnt, pppl: pppl.size };
+}
+// 什麼時候最擠：星期×小時；日、週看這週往前共 4 週，月看那個月
+function stHeat(R) {
+  const e = ST.per === 'month' ? R.e : (ST.per === 'week' ? R.e : weekStart(R.s) + 7 * DAY), s = ST.per === 'month' ? R.s : e - 28 * DAY;
+  const m = Array.from({ length: 7 }, () => Array(24).fill(0));
+  for (const x of stList()) {
+    const [a0, b0] = ivl(x), a = Math.max(a0, s), b = Math.min(b0, e);
+    for (let t = a; t < b;) { const d = new Date(t), nx = new Date(t); nx.setMinutes(60, 0, 0); const te = Math.min(b, nx.getTime()); m[(d.getDay() + 6) % 7][d.getHours()] += te - t; t = te; }
+  }
+  return { m, s, e };
+}
+const r1 = v => Math.round(v * 10) / 10;
+const sum = a => a.reduce((x, y) => x + y, 0);
+// 數字從上次的值跳到新值（同一個格子只在值改變時跳）
+function countTo(el, key, to, fmt) {
+  const from = ST.shown[key] == null ? 0 : ST.shown[key]; ST.shown[key] = to;
+  if (REDUCE || from === to) { el.textContent = fmt(to); return; }
+  const t0 = performance.now(), D = 900;
+  const step = t => { const k = Math.min(1, (t - t0) / D), e = 1 - Math.pow(1 - k, 3); el.textContent = fmt(from + (to - from) * e); if (k < 1 && ST.shown[key] === to) requestAnimationFrame(step); };
+  requestAnimationFrame(step);
+}
+const vs = (cur, prev, name) => prev ? (cur === prev ? '和' + name + '一樣' : '比' + name + (cur > prev ? '多 ' : '少 ') + Math.round(Math.abs(cur - prev) / prev * 100) + '%') : (cur ? name + '沒有紀錄' : '—');
+const setPer = k => { ST.per = k; ST.off = 0; ST.qk = null; try { localStorage.setItem(ST_KEY, k); } catch (_) {} stopPlay(); render(); };
+const ICO_STATS = '<svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke-width="1.5"><path d="M2.5 13.5h11"/><path d="M4.5 11V8M8 11V4.5M11.5 11V6.5"/></svg>';
+
+function statsPage() {
+  ensureHist();
+  if (!ST.el) buildStats();
+  return ST.el;
+}
+function buildStats() {
+  const U = ST.ui;
+  const segB = (k, t) => h('button', { type: 'button', 'data-per': k, onclick: () => setPer(k) }, t);
+  U.seg = h('div', { class: 'seg', role: 'group', 'aria-label': '統計區間' }, segB('day', '日'), segB('week', '週'), segB('month', '月'));
+  U.label = h('b', { class: 'num' });
+  U.next = h('button', { class: 'btn sm', type: 'button', 'aria-label': '下一段', onclick: () => { if (ST.off < 0) { ST.off++; stopPlay(); render(); } } }, '›');
+  const prev = h('button', { class: 'btn sm', type: 'button', 'aria-label': '上一段', onclick: () => { ST.off--; stopPlay(); render(); } }, '‹');
+  U.play = h('button', { class: 'btn sm st-play', type: 'button', onclick: togglePlay }, '▶ 播放');
+  U.find = h('p'); U.note = h('div', { class: 'note hide' });
+  const K = (k, label, unit, lead) => { const n = h('span'), c = h('div', { class: 'c' }); U['k' + k] = { n, c }; return h('div', { class: 'kpi' }, h('div', { class: 'l' }, label), h('div', { class: 'v' + (lead ? ' lead' : '') }, n, h('small', null, unit)), c); };
+  U.kpis = h('section', { class: 'card kpis st-k' }, K('h', '使用時數', ' 小時', true), K('n', '使用次數', ' 次'), K('p', '使用人數', ' 人'), K('a', '平均每次', ' 分鐘'));
+  U.mainT = h('h2');
+  U.legend = h('div', { class: 'st-leg' }, ACCTS.map(id => h('span', null, h('i', { style: 'background:' + AC_COLOR[id] }), h('span', { 'data-acct': id }, aname(id)))));
+  U.tblBtn = h('button', { class: 'link st-tb', type: 'button', onclick: () => { ST.tableOn = !ST.tableOn; render(); } }, '看表格');
+  U.main = h('div', { class: 'chart st-main' }); U.table = h('div', { class: 'st-table hide' });
+  U.rank = h('div', { class: 'chart st-rank' }); U.rankE = h('div', { class: 'empty hide' }, '這段期間還沒有人用。');
+  U.share = h('div', { class: 'st-share' }); U.purp = h('div', { class: 'st-purp' });
+  U.heat = h('div', { class: 'chart st-heat' }); U.heatS = h('small');
+  // 額度走勢：每週／5 小時切換、三個帳號的摘要（兼圖例）、折線圖、回報紀錄表
+  const qB = (k, t) => h('button', { type: 'button', 'data-k': k, onclick: () => { ST.qk = k; render(); } }, t);
+  U.qSeg = h('div', { class: 'seg st-qseg', role: 'group', 'aria-label': '額度種類' }, qB('w', '每週額度'), qB('5', '5 小時額度'));
+  U.qTb = h('button', { class: 'link st-tb', type: 'button', onclick: () => { ST.qTbl = !ST.qTbl; render(); } }, '看回報紀錄');
+  U.qFind = h('p', { class: 'st-qf' }); U.qSum = h('div', { class: 'st-qs' });
+  U.quota = h('div', { class: 'chart st-q' }); U.qE = h('div', { class: 'empty hide' }); U.qT = h('div', { class: 'st-table hide' });
+  U.qNote = h('p', { class: 'st-qn' }, '數字是「已用 %」。每個點是一次回報（有人更新額度、回報已滿，或 Claude Code 自動回報）；兩次回報之間沿用上一次的數字，過了重置時間歸零。橘色虛線是 90%，過了就是快滿。');
+  ST.el = h('main', { class: 'canvas stats' },
+    h('div', { class: 'title' }, h('div', null, h('h1', null, '用量統計'), U.find),
+      h('div', { class: 'st-ctl' }, U.seg, h('div', { class: 'st-nav' }, prev, U.label, U.next), U.play)),
+    U.note, U.kpis,
+    h('section', { class: 'card' }, h('div', { class: 'ch' }, U.mainT, U.legend, U.tblBtn), U.main, U.table),
+    h('section', { class: 'card' }, h('div', { class: 'ch' }, h('h2', null, '額度走勢'), U.qSeg, U.qTb), U.qFind, U.qSum, U.quota, U.qE, U.qNote, U.qT),
+    h('div', { class: 'st-row' },
+      h('section', { class: 'card' }, h('div', { class: 'ch' }, h('h2', null, '誰用最多'), h('small', null, '小時；深綠的是你')), U.rank, U.rankE),
+      h('section', { class: 'card' }, h('div', { class: 'ch' }, h('h2', null, '三個帳號分配')), U.share, h('div', { class: 'ch' }, h('h2', null, '用途')), U.purp)),
+    h('section', { class: 'card' }, h('div', { class: 'ch' }, h('h2', null, '什麼時候最擠'), U.heatS), U.heat));
+}
+
+// 播放：把這段期間從第一格開始累加重播一次（柱子一格格長出、排名即時換位、數字往上跳）
+function togglePlay() {
+  if (ST.play) { stopPlay(); updateStats(); return; }
+  const n = stRange(ST.per, ST.off).n;
+  ST.play = { i: -1, n };
+  ST.ui.play.textContent = '■ 停止';
+  ST.play.t = setInterval(() => { ST.play.i++; if (ST.play.i >= n - 1) stopPlay(); updateStats(); }, Math.max(160, Math.min(450, 6500 / n)));
+}
+function stopPlay() { if (!ST.play) return; clearInterval(ST.play.t); ST.play = null; if (ST.ui.play) ST.ui.play.textContent = '▶ 播放'; }
+
+const EC_FONT = '"DM Sans","Noto Sans TC","Microsoft JhengHei",sans-serif';
+const EC_TIP = { backgroundColor: '#fff', borderColor: '#e5e7eb', borderWidth: 1, padding: [8, 10], textStyle: { color: '#111827', fontSize: 13, fontFamily: EC_FONT }, extraCssText: 'box-shadow:none;border-radius:6px;' };
+const dotH = c => '<span style="display:inline-block;width:9px;height:9px;border-radius:3px;margin-right:6px;background:' + c + '"></span>';
+function updateStats() {
+  const U = ST.ui, R = stRange(ST.per, ST.off), C = stCalc(R), up = ST.play ? ST.play.i : null;
+  U.seg.querySelectorAll('button').forEach(b => { const on = b.dataset.per === ST.per; b.classList.toggle('on', on); b.setAttribute('aria-pressed', on ? 'true' : 'false'); });
+  U.label.textContent = R.label; U.next.disabled = ST.off >= 0;
+  U.legend.querySelectorAll('[data-acct]').forEach(e => { e.textContent = aname(e.dataset.acct); });
+  // 一句話：這段期間多少、和上一期比、最忙的格子
+  const tb = ACCTS.reduce((a, id) => a.map((v, i) => v + C.A[id][i]), Array(R.n).fill(0)), pk = tb.indexOf(Math.max(...tb));
+  U.find.textContent = !ST.hist ? '讀取使用紀錄中…' : C.tot ? R.name + '共用了 ' + r1(C.tot / HR) + ' 小時、' + C.cnt + ' 次，' + vs(C.tot, C.ptot, R.prev) + '；最忙的是 ' + R.tip(pk).replace('\n', ' ') + '。' : R.name + '還沒有使用紀錄。';
+  U.note.classList.toggle('hide', !ST.err); U.note.textContent = ST.err;
+  // 四格數字（播放時只累加到目前那一格）
+  const upto = up == null ? R.n - 1 : up, totU = sum(tb.slice(0, upto + 1)), cntU = sum(C.nB.slice(0, upto + 1));
+  countTo(U.kh.n, 'h', r1(totU / HR), v => (v >= 100 ? Math.round(v) : v.toFixed(1)));
+  countTo(U.kn.n, 'n', cntU, v => String(Math.round(v)));
+  countTo(U.kp.n, 'p', C.ppl, v => String(Math.round(v)));
+  countTo(U.ka.n, 'a', C.cnt ? Math.round(C.tot / C.cnt / MIN) : 0, v => String(Math.round(v)));
+  U.kh.c.textContent = vs(r1(C.tot / HR), r1(C.ptot / HR), R.prev); U.kn.c.textContent = vs(C.cnt, C.pcnt, R.prev);
+  U.kp.c.textContent = '全組 ' + S.members.length + ' 人．' + vs(C.ppl, C.pppl, R.prev); U.ka.c.textContent = C.cnt ? '從開始到按「我用完了」' : '—';
+  // 主圖的格子：日只畫有人用的時段（至少 07–22 時）
+  let lo = 0, hi = R.n - 1;
+  if (ST.per === 'day') { const used = tb.map((v, i) => v ? i : -1).filter(i => i >= 0); lo = Math.min(7, used.length ? used[0] : 7); hi = Math.max(22, used.length ? used[used.length - 1] : 22); }
+  const idx = []; for (let i = lo; i <= hi; i++) idx.push(i);
+  const val = (id, i) => (i > upto ? 0 : R.div === MIN ? Math.round(C.A[id][i] / MIN) : r1(C.A[id][i] / HR));
+  U.mainT.textContent = (ST.per === 'day' ? '每小時' : '每天') + '使用' + R.unit;
+  // 表格（圖的文字版）
+  U.tblBtn.textContent = ST.tableOn ? '收起表格' : '看表格';
+  U.table.classList.toggle('hide', !ST.tableOn);
+  if (ST.tableOn) U.table.replaceChildren(h('table', { class: 't' },
+    h('thead', null, h('tr', null, h('th', null, ST.per === 'day' ? '時段' : '日期'), ACCTS.map(id => h('th', { class: 'n' }, aname(id))), h('th', { class: 'n' }, '合計（' + R.unit + '）'))),
+    h('tbody', null, idx.filter(i => tb[i]).map(i => h('tr', null, h('td', null, R.tip(i)), ACCTS.map(id => h('td', { class: 'n' }, String(val(id, i)))), h('td', { class: 'n' }, String(R.div === MIN ? Math.round(tb[i] / MIN) : r1(tb[i] / HR))))),
+      tb.some(Boolean) ? null : h('tr', null, h('td', { colspan: 5 }, '這段期間沒有紀錄。')))));
+  // 帳號分配（分段長條，寬度慢慢長到新比例）與用途
+  const accT = ACCTS.map(id => sum(C.A[id].slice(0, upto + 1))), all = sum(accT) || 1;
+  if (!U.sbar) {
+    U.sbar = h('div', { class: 'sbar', role: 'img' }, ACCTS.map(id => h('i', { 'data-acct': id, style: 'background:' + AC_COLOR[id] })));
+    U.srows = h('div', null, ACCTS.map(id => h('div', { class: 'srow', 'data-acct': id }, h('span', { class: 'dot', style: 'background:' + AC_COLOR[id] }), h('b'), h('span', { class: 'r h' }), h('span', { class: 'r c' }))));
+    U.share.append(U.sbar, U.srows);
+  }
+  U.sbar.setAttribute('aria-label', ACCTS.map((id, k) => aname(id) + ' ' + Math.round(accT[k] / all * 100) + '%').join('，'));
+  ACCTS.forEach((id, k) => {
+    const p = accT[k] / all * 100, blk = U.sbar.querySelector('[data-acct="' + id + '"]');
+    blk.style.width = (accT[k] ? p : 0) + '%'; blk.textContent = p >= 12 ? Math.round(p) + '%' : '';
+    const row = U.srows.querySelector('[data-acct="' + id + '"]'), n = stList().filter(s => s.acct === id && s.start >= R.s && s.start < R.e).length;
+    row.querySelector('b').textContent = aname(id); row.querySelector('.h').textContent = r1(accT[k] / HR) + ' 小時'; row.querySelector('.c').textContent = n + ' 次';
+  });
+  const pu = Object.entries(C.PU).sort((a, b) => b[1] - a[1]), pmax = pu.length ? pu[0][1] : 1;
+  U.purp.replaceChildren(...(pu.length ? pu.map(([k, v]) => {
+    const b = h('b', { style: 'width:' + (ST.shown['pu' + k] || 0) + '%' });
+    requestAnimationFrame(() => { b.style.width = (v / pmax * 100) + '%'; }); ST.shown['pu' + k] = v / pmax * 100;
+    return h('div', { class: 'pr' }, h('span', null, k), h('span', { class: 'bar' }, b), h('span', { class: 'r num' }, r1(v / HR) + ' 時'));
+  }) : [h('div', { class: 'empty0' }, '—')]));
+  // 額度走勢（文字部分；圖在下面）
+  ensureQuota(R);
+  const qk = ST.qk || (ST.per === 'day' ? '5' : 'w'), Q = qSeries(R, qk, Math.min(R.e, Date.now(), up == null ? Infinity : R.s + (up + 1) * R.step));
+  stQuotaText(R, qk, Q);
+  // 圖表（ECharts）
+  loadEC().then(ec => {
+    if (!ST.el || !ST.el.isConnected) return;
+    ['main', 'rank', 'heat', 'quota'].forEach(k => {
+      if (ST.ch[k]) return;
+      ST.ch[k] = ec.init(U[k], null, { renderer: 'svg' });
+      if (window.ResizeObserver) new ResizeObserver(() => ST.ch[k] && ST.ch[k].resize()).observe(U[k]);
+    });
+    stMain(R, C, idx, val, up);
+    if (Q.any) stQuotaChart(R, Q, up);
+    stRank(R, C, upto);
+    stHeatChart(R);
+  }, () => { U.note.classList.remove('hide'); U.note.textContent = '圖表程式載入失敗（可能是網路），上面的數字與表格仍然正確。'; });
+}
+function stMain(R, C, idx, val, up) {
+  const cats = idx.map(R.xl), nowIdx = idx.indexOf(R.now);
+  ST.ch.main.setOption({
+    aria: { enabled: true }, textStyle: { fontFamily: EC_FONT },
+    animationDuration: 900, animationDurationUpdate: up == null ? 750 : 260, animationEasingUpdate: 'cubicOut',
+    grid: { left: 44, right: 18, top: 34, bottom: ST.per === 'week' ? 44 : 28 },
+    tooltip: Object.assign({ trigger: 'axis', axisPointer: { type: 'shadow', shadowStyle: { color: 'rgba(34,104,79,.07)' } },
+      formatter: ps => { const i = idx[ps[0].dataIndex], t = ps.reduce((a, p) => a + (+p.value || 0), 0); return '<b>' + R.tip(i) + '</b><br>' + ps.map(p => dotH(p.color) + p.seriesName + '　' + p.value + ' ' + R.unit).join('<br>') + '<br>合計　' + (R.div === MIN ? t : r1(t)) + ' ' + R.unit; } }, EC_TIP),
+    xAxis: { type: 'category', data: cats, axisTick: { show: false }, axisLine: { lineStyle: { color: '#d1d5db' } }, axisLabel: { color: '#525863', fontSize: 12, lineHeight: 15, interval: ST.per === 'month' ? (cats.length > 20 ? 1 : 0) : 'auto' } },
+    yAxis: { type: 'value', name: R.unit, nameTextStyle: { color: '#525863', align: 'right' }, minInterval: R.div === MIN ? 10 : 0.5, splitLine: { lineStyle: { color: '#eef0f2' } }, axisLabel: { color: '#525863' } },
+    series: ACCTS.map((id, k) => ({
+      id, name: aname(id), type: 'bar', stack: 'use', barMaxWidth: 24, data: idx.map(i => val(id, i)),
+      itemStyle: { color: AC_COLOR[id], borderColor: '#fff', borderWidth: 1, borderRadius: k === ACCTS.length - 1 ? [4, 4, 0, 0] : 0 },
+      emphasis: { focus: 'series' }, universalTransition: { enabled: true },
+      markLine: k === 0 && nowIdx >= 0 ? { silent: true, symbol: 'none', lineStyle: { color: '#b4540a', width: 1, type: 'solid' }, label: { formatter: '現在', color: '#7a3807', fontSize: 11 }, data: [{ xAxis: cats[nowIdx] }] } : { data: [] }
+    }))
+  });
+}
+function stRank(R, C, upto) {
+  const ppl = Object.values(C.P).map(p => ({ name: p.name, mine: p.mid === myId(), v: r1(sum(p.b.slice(0, upto + 1)) / HR) }));
+  ST.ui.rankE.classList.toggle('hide', ppl.length > 0);
+  ST.ui.rank.style.display = ppl.length ? '' : 'none';
+  if (!ppl.length) return;
+  ST.ui.rank.style.height = (ppl.length * 30 + 16) + 'px';
+  ST.ch.rank.resize();
+  ST.ch.rank.setOption({
+    aria: { enabled: true }, textStyle: { fontFamily: EC_FONT },
+    animationDuration: 600, animationDurationUpdate: ST.play ? 300 : 700, animationEasing: 'cubicOut', animationEasingUpdate: ST.play ? 'linear' : 'cubicOut',
+    grid: { left: 64, right: 52, top: 6, bottom: 6 },
+    tooltip: Object.assign({ trigger: 'item', formatter: p => p.name + '　' + p.value + ' 小時' }, EC_TIP),
+    xAxis: { type: 'value', max: 'dataMax', show: false },
+    yAxis: { type: 'category', data: ppl.map(p => p.name), inverse: true, animationDuration: 300, animationDurationUpdate: 300, axisTick: { show: false }, axisLine: { show: false }, axisLabel: { color: '#111827', fontSize: 13 } },
+    series: [{ id: 'rank', type: 'bar', realtimeSort: true, barMaxWidth: 16, data: ppl.map(p => ({ value: p.v, itemStyle: { color: p.mine ? '#178257' : '#9fcab4', borderRadius: [0, 4, 4, 0] } })),
+      label: { show: true, position: 'right', color: '#525863', fontSize: 12, valueAnimation: true, formatter: p => p.value } }]
+  }, { replaceMerge: ['yAxis'] });
+}
+function stHeatChart(R) {
+  const H = stHeat(R), cells = [], hrsUsed = [];
+  H.m.forEach(row => row.forEach((v, hr) => { if (v) hrsUsed.push(hr); }));
+  const lo = Math.min(7, hrsUsed.length ? Math.min(...hrsUsed) : 7), hi = Math.max(22, hrsUsed.length ? Math.max(...hrsUsed) : 22);
+  let mx = 0;
+  H.m.forEach((row, d) => { for (let hr = lo; hr <= hi; hr++) { const v = Math.round(row[hr] / MIN); mx = Math.max(mx, v); cells.push([hr - lo, d, v]); } });
+  ST.ui.heatS.textContent = (ST.per === 'month' ? R.name : fmtD(H.s) + '–' + fmtD(H.e - DAY) + ' 四週') + '合計；顏色越深，那個時段用的人越多（分鐘）';
+  ST.ch.heat.setOption({
+    aria: { enabled: true }, textStyle: { fontFamily: EC_FONT },
+    animationDuration: 700, animationDurationUpdate: 600,
+    grid: { left: 36, right: 12, top: 8, bottom: 62 },
+    tooltip: Object.assign({ formatter: p => '週' + '一二三四五六日'[p.value[1]] + ' ' + pad(p.value[0] + lo) + ':00–' + pad(p.value[0] + lo + 1) + ':00<br>共 ' + p.value[2] + ' 分鐘' }, EC_TIP),
+    xAxis: { type: 'category', data: Array.from({ length: hi - lo + 1 }, (_, i) => pad(i + lo)), splitArea: { show: false }, axisTick: { show: false }, axisLine: { show: false }, axisLabel: { color: '#525863', fontSize: 11 } },
+    yAxis: { type: 'category', data: ['一', '二', '三', '四', '五', '六', '日'], inverse: true, axisTick: { show: false }, axisLine: { show: false }, axisLabel: { color: '#525863' } },
+    visualMap: { min: 0, max: Math.max(mx, 1), calculable: false, orient: 'horizontal', left: 'center', bottom: 6, itemWidth: 12, itemHeight: 160, text: ['多', '少'], textStyle: { color: '#525863' }, inRange: { color: HEAT } },
+    series: [{ id: 'heat', type: 'heatmap', data: cells, itemStyle: { borderColor: '#fff', borderWidth: 2, borderRadius: 3 }, emphasis: { itemStyle: { borderColor: '#111827', borderWidth: 1 } },
+      animationDelay: i => (i % (hi - lo + 1)) * 12 + Math.floor(i / (hi - lo + 1)) * 30 }]
+  });
+}
+
+/* ---------- 額度走勢 ---------- */
+// 帳號文件只留最新一筆額度，所以開著看板的人看到額度變動，就順手記一筆到 cb_quota。
+// 同一帳號同一個半小時共用一筆（文件代號固定，大家重複寫只是覆蓋成一樣的內容），統計頁的讀取量才壓得住。
+// 資料庫規則還沒加 cb_quota 時寫入會被擋，這一頁就停止記錄，不影響看板其他功能。
+const QSLOT = 30 * MIN, QLOG_KEY = 'cb-qlog';
+const QK = { w: { name: '每週額度', v: 'pw', at: 'pwAt', by: 'byw' }, 5: { name: '5 小時額度', v: 'p5', at: 'p5At', by: 'by5' } };
+let qSent = {}, qOff = false;
+try { qSent = JSON.parse(localStorage.getItem(QLOG_KEY) || '{}') || {}; } catch (_) {}
+function qLog(list) {
+  if (qOff) return;
+  const docs = {}, src = a => (a.auto ? 'auto' : a.by || '');
+  const put = (id, at, f) => { const sl = Math.floor(at / QSLOT), k = id + '_' + sl; docs[k] = Object.assign(docs[k] || { acct: id, t: sl * QSLOT }, f); };
+  list.forEach(a => {
+    if (!ACCTS.includes(a.id)) return;
+    if (a.p5 != null && a.p5At) put(a.id, a.p5At, { p5: a.p5, p5At: a.p5At, r5: a.r5 || null, by5: a.at === a.p5At ? src(a) : '' });
+    if (a.pw != null && a.pwAt) put(a.id, a.pwAt, { pw: a.pw, pwAt: a.pwAt, byw: a.at === a.pwAt ? src(a) : '' });
+    if (a.full && a.fullAt) put(a.id, a.fullAt, { full: a.fullKind === 'w' ? 'w' : '5', fullAt: a.fullAt, fullUntil: a.fullUntil || null, byf: a.fullBy || '' });
+  });
+  const old = Date.now() - 14 * DAY;
+  Object.keys(qSent).forEach(k => { if (Number(k.split('_')[1]) * QSLOT < old) delete qSent[k]; });
+  Object.keys(docs).forEach(k => {
+    const sig = JSON.stringify(docs[k]);
+    if (qSent[k] === sig) return;
+    qSent[k] = sig;
+    BK.set('cb_quota/' + k, docs[k], true).then(() => { try { localStorage.setItem(QLOG_KEY, JSON.stringify(qSent)); } catch (_) {} },
+      e => { delete qSent[k]; if (/permission/i.test((e && (e.code || e.message)) || '')) qOff = true; });
+  });
+}
+// 統計頁才讀額度紀錄：從看的那段期間再往前 8 天（才知道期初的數字）；往更早翻時重新訂閱
+function ensureQuota(R) {
+  const need = R.s - 8 * DAY;
+  if (ST.qunsub && ST.qFrom <= need) return;
+  const from = Math.min(need, ST.qFrom);
+  if (ST.qunsub) ST.qunsub();
+  ST.qFrom = from; ST.qerr = '';
+  ST.qunsub = BK.watch('cb_quota', ['t', '>=', from], l => { ST.qh = l; render(); }, () => { ST.qerr = '額度紀錄讀不到：資料庫規則還沒加上 cb_quota，請管理者更新規則。'; render(); });
+  if (!ST.qreg) { ST.qreg = true; unsubs.push(() => { if (ST.qunsub) ST.qunsub(); Object.assign(ST, { qunsub: null, qh: null, qFrom: Infinity, qreg: false }); }); }
+}
+function qPts(id, k) {
+  const q = QK[k], pts = [];
+  (ST.qh || []).forEach(d => {
+    if (d.acct !== id) return;
+    if (d[q.v] != null && d[q.at]) pts.push({ t: d[q.at], v: d[q.v], r: k === '5' ? d.r5 : null, by: d[q.by] || '' });
+    if (d.full === k && d.fullAt) pts.push({ t: d.fullAt, v: 100, r: k === '5' ? d.fullUntil : null, by: d.byf || '', full: true });
+  });
+  return pts.sort((x, y) => x.t - y.t);
+}
+// 每個帳號一條階梯線：回報的點 → 沿用到下一次回報；中間過了重置時間就先掉到 0
+// 5 小時：用回報時記下的重置時間，沒有就算 5 小時後；每週：照帳號設定的每週重置
+function qSeries(R, k, end) {
+  const Q = { k, any: false };
+  ACCTS.forEach(id => {
+    const a = acct(id), pts = qPts(id, k).filter(p => p.t <= end), data = [];
+    let mx = 0, mxT = 0, n = 0, hit = 0;
+    pts.forEach((p, i) => {
+      const nx = i + 1 < pts.length ? pts[i + 1].t : end;
+      const rs = k === '5' ? (p.r > p.t ? p.r : p.t + H5) : (nextWeekly(a, p.t) || p.t + 7 * DAY);
+      data.push({ value: [p.t, p.v] });
+      if (rs < nx) data.push({ value: [rs, 0], symbol: 'none' });
+      if (p.t >= R.s && p.t < R.e) { n++; if (p.v >= 90) hit++; if (p.v >= mx) { mx = p.v; mxT = p.t; } }
+    });
+    const last = data.length ? data[data.length - 1].value : null;
+    if (last && last[0] < end) data.push({ value: [end, last[1]], symbol: 'none' });
+    if (data.length) Q.any = true;
+    Q[id] = { data, n, hit, mx, mxT, pts: pts.filter(p => p.t >= R.s && p.t < R.e) };
+  });
+  return Q;
+}
+const qWhen = t => (ST.per === 'day' ? '' : fmtD(t) + '（' + wd1(t) + '）') + hm(t);
+function stQuotaText(R, k, Q) {
+  const U = ST.ui, q = QK[k];
+  U.qSeg.querySelectorAll('button').forEach(b => { const on = b.dataset.k === k; b.classList.toggle('on', on); b.setAttribute('aria-pressed', on ? 'true' : 'false'); });
+  const msg = ST.qerr || (!ST.qh ? '讀取額度紀錄中…' : !Q.any ? '還沒有' + q.name + '的紀錄。額度走勢從這一版上線起開始記：之後有人更新額度、回報已滿，或 Claude Code 自動回報，這裡就會畫出三個帳號的走勢。' : '');
+  U.qE.textContent = msg; U.qE.classList.toggle('hide', !msg);
+  U.quota.style.display = Q.any ? '' : 'none'; U.qSum.style.display = Q.any ? '' : 'none'; U.qNote.style.display = Q.any ? '' : 'none';
+  // 一句話：這段期間最緊的帳號
+  const top = ACCTS.filter(id => Q[id].n).sort((a, b) => Q[b].mx - Q[a].mx)[0], hits = sum(ACCTS.map(id => Q[id].hit));
+  U.qFind.textContent = top ? R.name + '最緊的是 ' + aname(top) + '：' + q.name + '最高用到 ' + Q[top].mx + '%（' + qWhen(Q[top].mxT) + '）' + (hits ? '；三個帳號到 90% 以上共 ' + hits + ' 次' : '') + '。'
+    : Q.any ? R.name + '沒有新的' + q.name + '回報，線是沿用之前的數字。' : '';
+  U.qFind.classList.toggle('hide', !U.qFind.textContent);
+  // 三個帳號的摘要（兼圖例）
+  if (!U.qRows) U.qRows = ACCTS.map(id => { const r = h('div', { class: 'q1' }, h('i', { style: 'background:' + AC_COLOR[id] }), h('b'), h('span')); U.qSum.append(r); return r; });
+  ACCTS.forEach((id, i) => {
+    const x = Q[id], r = U.qRows[i];
+    r.querySelector('b').textContent = aname(id);
+    r.querySelector('span').textContent = x.n ? '最高 ' + x.mx + '%．回報 ' + x.n + ' 次' + (x.hit ? '．快滿 ' + x.hit + ' 次' : '') : '這段期間沒有回報';
+  });
+  // 回報紀錄（圖的文字版）
+  U.qTb.textContent = ST.qTbl ? '收起紀錄' : '看回報紀錄'; U.qTb.style.display = Q.any ? '' : 'none';
+  U.qT.classList.toggle('hide', !ST.qTbl || !Q.any);
+  if (!ST.qTbl || !Q.any) return;
+  const rows = ACCTS.flatMap(id => Q[id].pts.map(p => Object.assign({ id }, p))).sort((a, b) => b.t - a.t);
+  const who = p => (p.full ? '回報已滿' + (p.by ? '（' + mname(p.by, '管理者') + '）' : '') : p.by === 'auto' ? 'Claude Code 自動' : p.by ? mname(p.by, '管理者') : '—');
+  U.qT.replaceChildren(h('table', { class: 't' },
+    h('thead', null, h('tr', null, h('th', null, '時間'), h('th', null, '帳號'), h('th', { class: 'n' }, '已用'), h('th', null, '誰回報'))),
+    h('tbody', null, rows.slice(0, 80).map(p => h('tr', null, h('td', null, qWhen(p.t)), h('td', null, aname(p.id)), h('td', { class: 'n' }, p.v + '%'), h('td', null, who(p)))),
+      rows.length ? null : h('tr', null, h('td', { colspan: 4 }, '這段期間沒有回報，線是沿用之前的數字。')))));
+}
+function stQuotaChart(R, Q, up) {
+  const per = ST.per;
+  const fmtX = v => (per === 'day' ? pad(new Date(v).getHours()) + ':00' : per === 'week' ? wd1(v) + '\n' + fmtD(v) : String(new Date(v).getDate()));
+  const held = (id, t) => { let v = null; for (const d of Q[id].data) { if (d.value[0] > t) break; v = d.value[1]; } return v; };
+  const ml = [{ yAxis: 90, lineStyle: { color: '#b4540a', type: 'dashed', width: 1 }, label: { formatter: '快滿', color: '#7a3807', fontSize: 11, position: 'insideEndTop' } }];
+  if (R.cur) ml.push({ xAxis: Date.now(), lineStyle: { color: '#b4540a', width: 1, type: 'solid' }, label: { formatter: '現在', color: '#7a3807', fontSize: 11 } });
+  ST.ch.quota.setOption({
+    aria: { enabled: true }, textStyle: { fontFamily: EC_FONT },
+    animationDuration: 1400, animationEasing: 'cubicOut', animationDurationUpdate: up == null ? 700 : 240, animationEasingUpdate: 'cubicOut',
+    grid: { left: 44, right: 18, top: 16, bottom: per === 'week' ? 44 : 28 },
+    tooltip: Object.assign({ trigger: 'axis', axisPointer: { type: 'line', lineStyle: { color: '#9ca3af', width: 1 } },
+      formatter: ps => { const t = ps[0].axisValue; return '<b>' + qWhen(t) + '</b><br>' + ACCTS.map(id => { const v = held(id, t); return dotH(AC_COLOR[id]) + aname(id) + '　' + (v == null ? '—' : v + '%'); }).join('<br>'); } }, EC_TIP),
+    xAxis: { type: 'time', min: R.s, max: R.e, minInterval: per === 'day' ? 3 * HR : DAY, maxInterval: per === 'day' ? 3 * HR : per === 'week' ? DAY : 7 * DAY,
+      axisTick: { show: false }, axisLine: { lineStyle: { color: '#d1d5db' } }, splitLine: { show: false },
+      axisLabel: { color: '#525863', fontSize: 12, lineHeight: 15, hideOverlap: true, showMaxLabel: false, formatter: fmtX } },
+    yAxis: { type: 'value', min: 0, max: 100, interval: 25, axisLabel: { color: '#525863', formatter: '{value}%' }, splitLine: { lineStyle: { color: '#eef0f2' } } },
+    series: ACCTS.map((id, i) => ({
+      id: 'q' + id, name: aname(id), type: 'line', step: 'end', data: Q[id].data, symbol: 'circle', symbolSize: 8, showSymbol: true,
+      lineStyle: { width: 2, color: AC_COLOR[id] }, itemStyle: { color: AC_COLOR[id], borderColor: '#fff', borderWidth: 2 },
+      emphasis: { focus: 'series' }, universalTransition: { enabled: true },
+      markLine: i === 0 ? { silent: true, symbol: 'none', data: ml } : { data: [] }
+    }))
+  });
 }
 
 /* ---------- 底部視窗 ---------- */
