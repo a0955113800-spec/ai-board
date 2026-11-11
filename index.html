@@ -373,11 +373,18 @@ html.home{overscroll-behavior-y:none}
 }
 
 /* 分組（115.11.11）：組別切換、全部時的組名分隔、成員表多一欄組別、各組管理者欄位、全公司額度表 */
-.gsw{display:flex;flex-wrap:wrap;margin:2px 0 -2px;width:fit-content;max-width:100%}
-.gsw button{height:auto;min-height:30px;padding:4px 14px;display:inline-flex;align-items:baseline;gap:6px}
-.gsw button small{font-size:11px;color:var(--muted);font-weight:400}
-.gsep{padding:12px 20px 4px;font-size:12px;font-weight:600;color:var(--muted);border-top:1px solid var(--border);letter-spacing:.04em}
-.card>.ch+.gsep{border-top:0;padding-top:4px}
+/* 四組分頁（115.11.11 加大區隔）：一組一個顏色（--gc，與統計圖同色），選到的那組白底＋4px 組色底線；字一律黑／灰，顏色只在色塊 */
+.gsw{display:flex;width:100%;border-bottom:1px solid var(--control);margin:4px 0 0}
+.gsw button{--gc:var(--control);display:flex;align-items:center;gap:8px;min-width:132px;padding:12px 20px 10px;border:0;border-bottom:4px solid transparent;margin-bottom:-1px;border-radius:8px 8px 0 0;background:none;font-size:17px;font-weight:600;color:var(--muted);transition:background-color .15s}
+.gsw button:hover{background:var(--raised);color:var(--text)}
+.gsw button.on{background:var(--surface);color:var(--text);border-bottom-color:var(--gc)}
+.gsw button:focus-visible{outline:2px solid var(--accent);outline-offset:-2px}
+.gsw .gdot{flex:none;width:12px;height:12px;border-radius:3px;background:var(--gc)}
+.gsw button small{font-size:12px;color:var(--muted);font-weight:400}
+.gmk{display:inline-block;width:8px;height:.9em;border-radius:3px;background:var(--gc);margin-right:12px;vertical-align:-.05em}
+.gsep{display:flex;align-items:center;gap:10px;padding:14px 20px 6px;font-size:16px;font-weight:700;color:var(--text);border-top:8px solid var(--ground)}
+.gsep::before{content:'';flex:none;width:5px;height:18px;border-radius:2px;background:var(--gc,var(--muted))}
+.card>.ch+.gsep{border-top:0;padding-top:6px}
 .st-gsw{margin:-6px 0 14px}.st-gsw:empty{display:none}
 .mrow.g{grid-template-columns:minmax(0,.8fr) minmax(0,1.1fr) minmax(0,1fr) minmax(0,1fr) minmax(0,.8fr) minmax(0,1.6fr) auto}
 .field.gadm{align-items:flex-start}.field.gadm textarea{flex:1 1 260px;min-width:0}
@@ -389,8 +396,10 @@ html.home{overscroll-behavior-y:none}
 td.muted{font-size:13px}
 table.t th.n{text-align:right}
 @media (max-width:760px){
-  .gsw{width:100%}.gsw button{flex:1 1 auto;justify-content:center;padding:4px 8px}
-  .gsep{padding:10px 16px 2px}
+  .gsw button{flex:1 1 0;min-width:0;justify-content:center;gap:5px;padding:10px 2px 8px;font-size:15px}
+  .gsw .gdot{width:9px;height:9px}
+  .gsw button small{display:none}
+  .gsep{padding:12px 16px 4px;font-size:15px}
   .mrow.g{grid-template-columns:minmax(0,1fr) minmax(0,1fr)}
   .qv i{width:40px}
   .st-qnow{padding:4px 12px 12px;overflow-x:auto}
@@ -821,7 +830,8 @@ function homePage() {
     ? [B('我還在用', () => act(() => BK.update('cb_sessions/' + s.id, { touched: Date.now() }), '已更新，3 小時內不會變灰')), B('這個帳號滿了', () => fullSheet(s.acct)), B('我用完了', () => endSheet(s), 'primary')]
     : [B('我要登入', () => loginSheet(m)), B('開始使用', () => startSheet(m), 'primary')];
   const d = new Date(), v = viewG(), va = viewAccts();
-  out.append(h('div', { class: 'title' }, h('div', null, h('h1', null, '帳號看板'), h('p', null, suggestion(m))), h('div', { class: 'act' }, acts)));
+  const hd = v === 'all' ? '帳號看板' : [h('i', { class: 'gmk', style: '--gc:' + G_COLOR[v], 'aria-hidden': 'true' }), grpById(v).name + '看板'];
+  out.append(h('div', { class: 'title' }, h('div', null, h('h1', null, hd), h('p', null, suggestion(m))), h('div', { class: 'act' }, acts)));
   out.append(gSwitch(v, setView, myG()));
   out.append(h('div', { class: 'stamp num' }, (d.getMonth() + 1) + '/' + d.getDate() + '（' + WD[d.getDay()].slice(1) + '）' + hm(d) + ' 更新．大家的回報會即時出現．背景水位＝' + (v === 'all' ? '全部 ' + va.length + ' 個帳號' : grpById(v).name + (va.length > 1 ? ' ' + va.length + ' 個帳號' : '帳號')) + '平均已用 ' + tideLvl() + '%'));
   const tip = homeTip(); if (tip) out.append(tip);
@@ -842,15 +852,18 @@ function homePage() {
 // 正在看的帳號逐一畫出；看「全部」時每組前面加組名
 function byGroup(fn) {
   if (viewG() !== 'all') return viewAccts().map(fn);
-  return LIVE().map(g => [h('div', { class: 'gsep' }, g.name), g.accts.map(fn)]);
+  return LIVE().map(g => [gsep(g), g.accts.map(fn)]);
 }
-// 組別切換：只有一組時不顯示；mine＝自己這組（標「我的組」）
+// 「全部」時每組前面的組名列：組色短條＋組名（字維持黑色，顏色只在短條）
+const gsep = g => h('div', { class: 'gsep', style: '--gc:' + G_COLOR[g.id] }, g.name);
+// 組別切換（115.11.11 改成大分頁，一組一個顏色，與統計圖同色）：只有一組時不顯示；mine＝自己這組（標「我的組」）；「全部」放最後
 function gSwitch(cur, pick, mine, allLabel) {
   const L = LIVE();
   if (L.length < 2) return null;
-  const B = (k, t, sub) => h('button', { type: 'button', class: cur === k ? 'on' : '', 'aria-pressed': cur === k ? 'true' : 'false', onclick: () => pick(k) }, t, sub ? h('small', null, sub) : null);
-  return h('div', { class: 'seg gsw', role: 'group', 'aria-label': '看哪一組' },
-    B('all', allLabel || '全部'), L.map(g => B(g.id, g.name, mine === g.id ? '我的組' : '')));
+  const B = (k, t, sub, c) => h('button', { type: 'button', class: cur === k ? 'on' : '', 'aria-pressed': cur === k ? 'true' : 'false', style: c ? '--gc:' + c : null, onclick: () => pick(k) },
+    c ? h('i', { class: 'gdot', 'aria-hidden': 'true' }) : null, h('span', null, t), sub ? h('small', null, sub) : null);
+  return h('div', { class: 'gsw', role: 'group', 'aria-label': '看哪一組' },
+    L.map(g => B(g.id, g.name, mine === g.id ? '我的組' : '', G_COLOR[g.id])), B('all', allLabel || '全部'));
 }
 
 // 帳號分組：每個帳號一列，列出固定用它的人；正在用的人標 ◐（用別的帳號就標「在 某帳號」），自己的名牌是綠框
@@ -871,7 +884,7 @@ function groups(m) {
   return h('section', { class: 'card' }, h('div', { class: 'ch' }, h('h2', null, '帳號分組'), h('small', null, '每個帳號固定由哪些人使用；◐ 是現在正在用')),
     gs.map(g => {
       const none = S.members.filter(p => grpOf(p) === g.id && !g.accts.includes(p.acct));
-      return [gs.length > 1 ? h('div', { class: 'gsep' }, g.name) : null, g.accts.map(id => row(aname(id), of(id), id)), none.length ? row((gs.length > 1 ? '' : g.name) + '未分組', none) : null];
+      return [gs.length > 1 ? gsep(g) : null, g.accts.map(id => row(aname(id), of(id), id)), none.length ? row((gs.length > 1 ? '' : g.name) + '未分組', none) : null];
     }));
 }
 
